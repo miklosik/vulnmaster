@@ -44,24 +44,52 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
 }
 
 async fn setup_database(app_handle: &tauri::AppHandle) -> Result<SqlitePool, Box<dyn std::error::Error>> {
-    //let app_dir = app_handle.path_resolver().app_local_data_dir().ok_or("No data dir")?;
-    // --- THIS IS THE NEW, CORRECT LINE ---
-    //let app_dir = app_handle.path().app_local_data_dir().ok_or("No data dir")?;
     let app_dir = app_handle.path().app_local_data_dir()?;
-
-    if !app_dir.exists() { std::fs::create_dir_all(&app_dir)?; }
-    
-    let db_url = format!("sqlite:{}", app_dir.join("vulnmaster.db").to_str().unwrap());
-    
-    // Create the file if it doesn't exist
-    if !std::path::Path::new(&app_dir.join("vulnmaster.db")).exists() {
-        std::fs::File::create(app_dir.join("vulnmaster.db"))?;
+    if !app_dir.exists() {
+        std::fs::create_dir_all(&app_dir)?;
     }
-
-    let pool = SqlitePoolOptions::new().connect(&db_url).await?;
     
-    sqlx::query("CREATE TABLE IF NOT EXISTS datasets (id TEXT PRIMARY KEY, file_name TEXT, created_at TEXT)").execute(&pool).await?;
-    sqlx::query("CREATE TABLE IF NOT EXISTS vulnerability_records (id TEXT PRIMARY KEY, dataset_id TEXT, cve_id TEXT, product TEXT, original_severity TEXT)").execute(&pool).await?;
+    let db_path = app_dir.join("vulnmaster.db");
+    let db_url = format!("sqlite:{}", db_path.to_str().unwrap());
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
+        .await?;
+
+    // FR1.7 - Create the datasets table (tracks file uploads)
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS datasets (
+            id TEXT PRIMARY KEY,
+            file_name TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )"
+    ).execute(&pool).await?;
+
+    // FR1.7 - Create the main vulnerability records table
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS vulnerability_records (
+            id TEXT PRIMARY KEY,
+            dataset_id TEXT NOT NULL,
+            
+            -- Key fields from CSV for quick filtering
+            cve_id TEXT,
+            product TEXT,
+            original_severity TEXT,
+            original_score REAL,
+            
+            -- Expert fields (for future use)
+            expert_severity TEXT,
+            expert_vector TEXT,
+            expert_score REAL,
+            expert_justification TEXT,
+
+            -- Catch-all for all other 60+ columns as a JSON blob
+            raw_data TEXT, 
+            
+            FOREIGN KEY (dataset_id) REFERENCES datasets (id)
+        )"
+    ).execute(&pool).await?;
     
     Ok(pool)
 }
