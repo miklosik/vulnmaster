@@ -1,11 +1,11 @@
 // src-tauri/src/main.rs
-use serde_json::Value;
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use serde_json::Value;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use tauri::Manager;
-use tauri_plugin_dialog; // <-- ADDED
-use tauri_plugin_shell;  // <-- ADDED
+use tauri_plugin_dialog;
+use tauri_plugin_shell;
 
 pub struct DbState(pub SqlitePool);
 
@@ -88,7 +88,7 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
     Ok(format!("Successfully ingested {} records from {}", record_count, file_name))
 }
 
-async fn fn(app_handle: &tauri::AppHandle) -> Result<SqlitePool, Box<dyn std::error::Error>> {
+async fn setup_database(app_handle: &tauri::AppHandle) -> Result<SqlitePool, Box<dyn std::error::Error>> {
     let app_dir = app_handle.path().app_local_data_dir()?;
     if !app_dir.exists() {
         std::fs::create_dir_all(&app_dir)?;
@@ -141,8 +141,8 @@ async fn fn(app_handle: &tauri::AppHandle) -> Result<SqlitePool, Box<dyn std::er
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init()) // <-- ADD THIS LINE
-        .plugin(tauri_plugin_shell::init())  // <-- ADD THIS LINE
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let handle = app.handle();
             tauri::async_runtime::block_on(async {
