@@ -8,7 +8,6 @@ import { Upload } from 'lucide-react'
 
 function App() {
   const [isLoading, setIsLoading] = useState(false)
-  //const { toast } = useToast() // Please note we are using sonner instead
 
   const handleFileIngest = async () => {
     setIsLoading(true)
@@ -20,23 +19,22 @@ function App() {
         filters: [{ name: 'CSV File', extensions: ['csv'] }]
       });
 
-      // 2. If user selected a file, call the Rust backend
-      if (selected && typeof selected.path === 'string') {
+       // 2. If user selected a file, call the Rust backend
+      // FIX: In Tauri v2, 'selected' IS the path string (or null). It is not an object.
+      if (selected) {
         const result: string = await invoke('ingest_csv', {
-          filepath: selected.path,
+          filepath: selected, // FIX: Pass 'selected' directly, not 'selected.path'
         });
         
         // 3. Show success toast
-        toast({
-          title: 'Ingestion Complete',
+        // FIX: Sonner takes (Title, Options). We removed 'title' and 'variant' keys from the options.
+        toast.success('Ingestion Complete', {
           description: result,
         });
       }
     } catch (error) {
       // 4. Show error toast
-      toast({
-        variant: 'destructive',
-        title: 'Ingestion Failed',
+      toast.error('Ingestion Failed', {
         description: String(error),
       });
     } finally {
