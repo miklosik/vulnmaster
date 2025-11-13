@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/use-toast'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
 import { Upload } from 'lucide-react'
 
 function App() {
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  //const { toast } = useToast() // Please note we are using sonner instead
 
   const handleFileIngest = async () => {
     setIsLoading(true)
