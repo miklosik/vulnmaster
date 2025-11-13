@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
@@ -7,26 +6,32 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, Calendar } from 'lucide-react';
+import { Plus, FileSpreadsheet, ChevronRight } from 'lucide-react';
 
 export default function Home() {
   const navigate = useNavigate();
   const [isIngesting, setIsIngesting] = useState(false);
 
-  // Mock data for display - in real app, fetch this from SQLite
+  // Mock data for display
   const datasets = [
-    { id: '1', name: 'scan_q1_2024.csv', date: '2024-05-15', count: 142, status: 'Analyzed' },
-    { id: '2', name: 'backend_api_scan.xlsx', date: '2024-06-02', count: 89, status: 'Pending' },
+    { id: '1', name: 'srlinux_scan_q1_2024.csv', date: '2025-07-28', count: 142, status: 'Analyzed', type: 'CSV' },
+    { id: '2', name: 'srlinux_25_7_2_scan.xlsx', date: '2025-10-10', count: 89, status: 'Pending', type: 'XLSX' },
+    { id: '3', name: 'srlinux_25_10_1_scan_vex.json', date: '2025-11-11', count: 1205, status: 'Pending', type: 'VEX' },
   ];
 
   const handleImport = async () => {
     setIsIngesting(true);
     try {
-      const selected = await open({ multiple: false, filters: [{ name: 'Reports', extensions: ['csv', 'xlsx'] }] });
+      const selected = await open({ 
+        multiple: false, 
+        title: "Select Scan Report",
+        filters: [{ name: 'Reports', extensions: ['csv', 'xlsx', 'json'] }] 
+      });
+      
       if (selected) {
+        // Note: 'selected' is the file path string in Tauri v2
         const res: string = await invoke('ingest_csv', { filepath: selected });
         toast.success("Import Successful", { description: res });
-        // Here you would refresh the dataset list
       }
     } catch (err) {
       toast.error("Import Failed", { description: String(err) });
@@ -37,50 +42,66 @@ export default function Home() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header Section */}
-      <header className="px-8 py-5 border-b flex justify-between items-center bg-white">
+      {/* Top Header */}
+      <header className="px-8 py-6 border-b border-stone-200 bg-white flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Imported Datasets</h1>
-          <p className="text-muted-foreground text-sm mt-1">Select a file to view CVEs and perform analysis.</p>
+          <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Datasets</h1>
+          <p className="text-stone-500 mt-2">Manage and analyze your vulnerability scan imports.</p>
         </div>
-        <Button onClick={handleImport} disabled={isIngesting} className="bg-[#8B4513] hover:bg-[#703810]">
+        <Button onClick={handleImport} disabled={isIngesting} className="bg-stone-900 hover:bg-stone-800 text-white shadow-sm">
           <Plus className="mr-2 h-4 w-4" /> 
-          {isIngesting ? 'Importing...' : 'Import New Scan'}
+          {isIngesting ? 'Importing...' : 'Import Scan'}
         </Button>
       </header>
 
-      {/* List Section */}
-      <div className="flex-1 overflow-auto p-8 bg-stone-50/30">
-        <div className="border rounded-md bg-white shadow-sm">
+      {/* Data Grid Container */}
+      <div className="p-8 bg-stone-50/50 flex-1">
+        <div className="border border-stone-200 rounded-xl bg-white shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead>File Name</TableHead>
+              <TableRow className="bg-stone-50/80 hover:bg-stone-50/80 border-b border-stone-200">
+                <TableHead className="w-[60px] pl-6">Type</TableHead>
+                <TableHead className="font-semibold text-stone-900">File Name</TableHead>
                 <TableHead>Import Date</TableHead>
-                <TableHead>Record Count</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Records</TableHead>
+                <TableHead>Analysis Status</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {datasets.map((file) => (
                 <TableRow 
                   key={file.id} 
-                  className="cursor-pointer hover:bg-stone-50"
-                  onClick={() => navigate(`/dataset/${file.id}`)} // Navigate to detail view
+                  className="cursor-pointer hover:bg-blue-50/50 transition-colors group border-stone-100"
+                  onClick={() => navigate(`/dataset/${file.id}`)}
                 >
-                  <TableCell><FileText className="h-4 w-4 text-stone-400" /></TableCell>
-                  <TableCell className="font-medium text-stone-700">{file.name}</TableCell>
-                  <TableCell className="text-stone-500">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-3 w-3" /> {file.date}
+                  <TableCell className="pl-6">
+                    <div className="h-8 w-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 border border-stone-200">
+                       <FileSpreadsheet className="h-4 w-4" />
                     </div>
                   </TableCell>
-                  <TableCell>{file.count}</TableCell>
+                  <TableCell className="font-medium text-stone-900 group-hover:text-blue-700">
+                    {file.name}
+                  </TableCell>
+                  <TableCell className="text-stone-500">
+                    <div className="flex items-center gap-2 text-xs uppercase font-medium tracking-wide">
+                      {file.date}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-stone-600">
+                    {file.count.toLocaleString()}
+                  </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={file.status === 'Pending' ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}>
+                    <Badge variant="secondary" className={
+                      file.status === 'Pending' 
+                        ? "bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200" 
+                        : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                    }>
                       {file.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <ChevronRight className="h-4 w-4 text-stone-300 group-hover:text-stone-500" />
                   </TableCell>
                 </TableRow>
               ))}
