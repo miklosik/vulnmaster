@@ -54,8 +54,8 @@ pub struct Dataset {
 async fn get_datasets(db_state: tauri::State<'_, DbState>) -> Result<Vec<Dataset>, String> {
     let pool = &db_state.0;
     
-    let datasets = sqlx::query_as!(
-        Dataset,
+   
+    let datasets = sqlx::query_as::<_, Dataset>(
         "SELECT id, file_name, created_at, record_count FROM datasets ORDER BY created_at DESC"
     )
     .fetch_all(pool)
@@ -69,6 +69,7 @@ async fn get_datasets(db_state: tauri::State<'_, DbState>) -> Result<Vec<Dataset
 async fn get_dataset_records(dataset_id: String, db_state: tauri::State<'_, DbState>) -> Result<Vec<VulnRecord>, String> {
     let pool = &db_state.0;
 
+   
     let records = sqlx::query_as::<_, VulnRecord>(
         "SELECT 
             id, dataset_id, cve_id, product, component, 
@@ -140,7 +141,7 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
         
         // Skip empty rows or rows that don't match header length
         if record.len() != headers.len() {
-            continue; // Skip jagged row
+            continue;
         }
         
         record_count += 1;
@@ -152,7 +153,6 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
             .into();
         let raw_data = json_map.to_string();
 
-        // --- Field Mapping ---
         let cve_id = json_map.get("CVE ID").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let product = json_map.get("Product").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let component = json_map.get("Component").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -161,7 +161,7 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
         let original_score: f64 = json_map.get("Original Score")
             .and_then(|v| v.as_str())
             .unwrap_or("0.0")
-            .replace(',', ".") // Handle scores like "7,3"
+            .replace(',', ".")
             .parse()
             .unwrap_or(0.0);
         let disposition_summary = json_map.get("Disposition Summary").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -169,13 +169,13 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
 
         if cve_id.is_empty() && product.is_empty() { continue; }
 
-        sqlx::query(
+        sqlx::query( // This query is a normal function, so it's OK
             "INSERT INTO vulnerability_records (
                 id, dataset_id, cve_id, product, component, 
                 original_severity, original_vector, original_score, 
                 disposition_summary, rationale, raw_data
              ) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" // 11 fields
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(&dataset_id)
@@ -192,9 +192,10 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
         .await
         .map_err(|e| e.to_string())?;
     }
-
-    // Create the Dataset entry (with correct count)
-    sqlx::query("INSERT INTO datasets (id, file_name, created_at, record_count) VALUES (?, ?, ?, ?)")
+ // Create the Dataset entry (with correct count)
+    sqlx::query(
+        "INSERT INTO datasets (id, file_name, created_at, record_count) VALUES (?, ?, ?, ?)"
+    )
         .bind(&dataset_id)
         .bind(&file_name)
         .bind(&created_at)
@@ -207,7 +208,6 @@ async fn ingest_csv(filepath: String, db_state: tauri::State<'_, DbState>) -> Re
     Ok(format!("Successfully ingested {} valid records from {}", record_count, file_name))
 }
 
-// UPDATED to include all new columns
 async fn setup_database(app_handle: &tauri::AppHandle) -> Result<SqlitePool, Box<dyn std::error::Error>> {
     let app_dir = app_handle.path().app_local_data_dir()?;
     if !app_dir.exists() {
