@@ -11,10 +11,10 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-stone-50 font-sans text-stone-900">
-      {/* SIDEBAR: Fixed width, dark styling for contrast */}
+      {/* SIDEBAR */}
       <aside className="w-64 flex-shrink-0 bg-[#2D2D2D] text-stone-300 flex flex-col border-r border-stone-800">
         
-        {/* Header: Clean, Text-based Logo */}
+        {/* Header */}
         <div className="h-16 flex items-center px-6 border-b border-stone-700/50">
           <ShieldAlert className="h-6 w-6 text-orange-500 mr-2" />
           <span className="font-bold text-white tracking-tight text-lg">VulnMaster</span>
@@ -32,8 +32,8 @@ export default function Layout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-orange-600 text-white shadow-md" // Active State
-                    : "hover:bg-stone-700 hover:text-white" // Hover State
+                    ? "bg-orange-600 text-white shadow-md"
+                    : "hover:bg-stone-700 hover:text-white"
                 }`
               }
             >
@@ -46,7 +46,7 @@ export default function Layout() {
         {/* Footer: Settings */}
         <div className="p-4 border-t border-stone-700/50">
           <button className="flex items-center gap-3 px-3 py-2 w-full rounded-md text-sm font-medium hover:bg-stone-700 hover:text-white transition-colors text-left">
-             <Settings className="h-4 w-4" /> Application Settings
+             <Settings className="h-4 w-4" /> Settings
           </button>
         </div>
       </aside>
